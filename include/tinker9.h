@@ -1,6 +1,10 @@
 #pragma once
 #include "tool/macro.h"
 #include <string>
+#include <csignal>
+#include <unistd.h>
+#include <iostream>
+#include <vector>
 
 /// \addtogroup general
 /// \{
@@ -59,4 +63,14 @@ void mechanic2();  ///< Sets up extra parameters and options in addition to the 
 void initialize(); ///< Sets up host and device environment.
 void finish();     ///< Cleans up host and device environment.
 /// \}
+
+// CSY: signal
+volatile sig_atomic_t signal_received = 0;
+
+void signal_handler(int signal) {
+    if (signal == SIGUSR1) {
+        signal_received = 1;
+    }
+}
+
 }

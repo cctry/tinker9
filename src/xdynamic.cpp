@@ -172,6 +172,20 @@ void xDynamic(int, char**)
    rc_flag = flags;
    initialize();
 
+   // CSY: register signal handler
+   struct sigaction sa;
+   // Clear the sigaction structure
+   std::memset(&sa, 0, sizeof(sa));
+
+   // Set the signal handler function
+   sa.sa_handler = &signal_handler;
+
+   // Set up sigaction to handle SIGUSR1
+   if (sigaction(SIGUSR1, &sa, nullptr) != 0) {
+      std::cerr << "Error setting up signal handler." << std::endl;
+      return 1;
+   }
+
    auto t_start = std::chrono::steady_clock::now();
    mdPropagate(nstep, dt);
    auto t_end = std::chrono::steady_clock::now();

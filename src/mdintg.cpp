@@ -152,8 +152,53 @@ void mdrestPrintP1(bool prints, double vtot1, double vtot2, double vtot3, double
 
 void mdPropagate(int nsteps, time_prec dt_ps)
 {
+   // CSY: x, y, z on CPU 
+   std::vector<real> x(n), y(n), z(n);
    for (int istep = 1; istep <= nsteps; ++istep) {
+      // CSY: wait for signal
+      while (!signal_received) {
+        sleep(1); // Use sleep to reduce CPU usage
+      }
+      // CSY: read x, y, z from file 
+      // CSY: Each line is in the format "x y z"
+      std::ifstream xyzfile;
+      xyzfile.open(filename);
+      while (std::getline(xyzfile, line)) {
+        std::string line; 
+        std::istringstream iss(line);
+        real x, y, z;
+        iss >> x_ >> y_ >> z_;
+        x.push_back(x_);
+        y.push_back(y_);
+        z.push_back(z_);
+      }
+      xyzfile.close();
+      // CSY: copy x, y, z to GPU
+      toGPU_xyz(x.data(), y.data(), z.data());
+
+
       intg->dynamic(istep, dt_ps);
+
+
+      // CSY: dump x, y, z 
+      fromGPU_xyz(x.data(), y.data(), z.data());
+      // CSY: save x, y, z to file
+      std::ofstream xyzfileOut(filename, std::ofstream::out | std::ofstream::trunc);
+
+      // CSY: Write the updated xyz values back to the file
+      for (size_t i = 0; i < x.size(); ++i) {
+         xyzfileOut << x[i] << " " << y[i] << " " << z[i] << std::endl;
+      }
+
+      xyzfileOut.close(); // Close the file after writing
+
+      // CSY: send signal back
+      if (kill(pid, SIGUSR2) != 0) {
+        std::cerr << "Error sending signal back." << std::endl;
+        return 1;
+      }
+      signal_received = 0;
+
 
       // mdstat
       bool save = (istep % inform::iwrite == 0);
